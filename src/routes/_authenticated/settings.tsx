@@ -32,6 +32,7 @@ function SettingsPage() {
       kie_ai_api_key: map.kie_ai_api_key ?? "",
       kie_ai_base_url: map.kie_ai_base_url ?? "",
       kie_ai_model: map.kie_ai_model ?? "",
+      kie_ai_embedding_model: map.kie_ai_embedding_model ?? "text-embedding-3-small",
     });
   }, [settings]);
 
