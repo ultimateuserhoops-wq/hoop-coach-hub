@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/settings")({ component: Se
 function SettingsPage() {
   const qc = useQueryClient();
   const { isAdmin, loading } = useRoles();
-  const [vals, setVals] = useState({ kie_ai_api_key: "", kie_ai_base_url: "", kie_ai_model: "" });
+  const [vals, setVals] = useState({ kie_ai_api_key: "", kie_ai_base_url: "", kie_ai_model: "", kie_ai_embedding_model: "" });
 
   const { data: settings } = useQuery({
     queryKey: ["app_settings"],
