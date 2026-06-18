@@ -70,6 +70,19 @@ function LibraryPage() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
 
+  // Auto-enqueue any documents still in `pending` (e.g. existing rows after the RAG migration, or after the kie.ai key is set).
+  // Idempotent: the edge function wipes any prior chunks before re-running.
+  const enqueuedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const d of docs as any[]) {
+      if (d.ingest_status === "pending" && !enqueuedRef.current.has(d.id)) {
+        enqueuedRef.current.add(d.id);
+        ingest(d.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs]);
+
   async function ingest(documentId: string) {
     const { error } = await supabase.functions.invoke("ingest-library-doc", {
       body: { document_id: documentId },
