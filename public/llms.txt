@@ -1,0 +1,7 @@
+# BDC Basketball Centre
+
+> Phần mềm hỗ trợ và quản lý chuyên môn dành cho HLV tại BDC Basketball Centre.
+
+## Pages
+- [Trang chủ](/): Giới thiệu phần mềm
+- [HLV của tháng](/coach-of-the-month): Bình chọn HLV xuất sắc nhất trong tháng
