@@ -11,6 +11,13 @@ const GenSchema = z.object({
 
 type Settings = { apiKey: string; baseUrl: string; model: string };
 
+const EMBED_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
+const EMBED_MODEL = "google/gemini-embedding-001";
+const EMBED_DIM = 1536;
+const RETRIEVAL_TOP_K = 6;
+const RETRIEVAL_THRESHOLD = 0.2;
+const CONTEXT_CHAR_BUDGET = 14000; // ~3500 tokens
+
 async function loadSettings(supabase: any): Promise<Settings> {
   const { data, error } = await supabase
     .from("app_settings")
@@ -23,6 +30,84 @@ async function loadSettings(supabase: any): Promise<Settings> {
     baseUrl: map.kie_ai_base_url ?? "https://api.kie.ai/v1",
     model: map.kie_ai_model ?? "opus-4.8",
   };
+}
+
+async function embedQuery(text: string): Promise<number[] | null> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) return null;
+  try {
+    const resp = await fetch(EMBED_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+      body: JSON.stringify({ model: EMBED_MODEL, input: text, dimensions: EMBED_DIM }),
+    });
+    if (!resp.ok) return null;
+    const json: any = await resp.json();
+    return json?.data?.[0]?.embedding ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function retrieveContext(supabase: any, query: string): Promise<string> {
+  const embedding = await embedQuery(query);
+  if (!embedding) {
+    // Fallback: titles + descriptions
+    const { data: lib } = await supabase
+      .from("library_documents")
+      .select("title,description")
+      .eq("ingest_status", "done")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (!lib || lib.length === 0) return "";
+    return `\n--- Tài liệu tham khảo (tiêu đề) ---\n${lib
+      .map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`)
+      .join("\n")}\n---`;
+  }
+
+  const { data: hits, error } = await supabase.rpc("match_document_chunks", {
+    query_embedding: embedding as any,
+    match_count: RETRIEVAL_TOP_K,
+    similarity_threshold: RETRIEVAL_THRESHOLD,
+  });
+
+  if (error || !hits || hits.length === 0) {
+    // Fallback to title list if no semantic hits
+    const { data: lib } = await supabase
+      .from("library_documents")
+      .select("title,description")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (!lib || lib.length === 0) return "";
+    return `\n--- Tài liệu tham khảo (tiêu đề) ---\n${lib
+      .map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`)
+      .join("\n")}\n---`;
+  }
+
+  // Pack passages until budget exhausted
+  let used = 0;
+  const parts: string[] = [];
+  for (const h of hits) {
+    const block = `[Nguồn: ${h.source_title}]\n${h.content}`;
+    if (used + block.length > CONTEXT_CHAR_BUDGET) {
+      const remaining = CONTEXT_CHAR_BUDGET - used;
+      if (remaining > 400) parts.push(block.slice(0, remaining) + "…");
+      break;
+    }
+    parts.push(block);
+    used += block.length;
+  }
+  return `\n--- Trích đoạn tài liệu BDC (tìm theo ngữ nghĩa) ---\n${parts.join("\n\n")}\n---`;
+}
+
+function buildRetrievalQuery(type: string, target: string, extra?: string) {
+  if (type === "curriculum") {
+    return `Giáo án và kế hoạch tập luyện bóng rổ cho học viên trình độ ${target}. ${extra ?? ""}`;
+  }
+  if (type === "tryout") {
+    return `Phương án try-out tuyển chọn lớp năng khiếu bóng rổ cho nhóm tuổi ${target}. Bài kiểm tra kỹ thuật, thể lực, IQ bóng rổ. ${extra ?? ""}`;
+  }
+  return `Lộ trình tập luyện cá nhân hóa cho học viên bóng rổ ${target}. ${extra ?? ""}`;
 }
 
 function buildPrompt(type: string, target: string, libRefs: string, extra?: string) {
@@ -59,15 +144,9 @@ export const generateWithKieAi = createServerFn({ method: "POST" })
       throw new Error("API key của kie.ai chưa được cấu hình. Vui lòng vào trang Cài đặt (Admin) để nhập API key thật.");
     }
 
-    // RAG-lite: pull library titles + descriptions as reference context
-    const { data: lib } = await supabase
-      .from("library_documents")
-      .select("title,description")
-      .order("created_at", { ascending: false })
-      .limit(20);
-    const libRefs = lib && lib.length
-      ? `\n--- Tài liệu tham khảo từ thư viện BDC ---\n${lib.map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`).join("\n")}\n---`
-      : "";
+    // Semantic retrieval over uploaded library content
+    const retrievalQuery = buildRetrievalQuery(data.type, data.target, data.extraContext);
+    const libRefs = await retrieveContext(supabase, retrievalQuery);
 
     const prompt = buildPrompt(data.type, data.target, libRefs, data.extraContext);
 
