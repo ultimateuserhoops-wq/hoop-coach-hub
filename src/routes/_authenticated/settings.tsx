@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/settings")({ component: Se
 function SettingsPage() {
   const qc = useQueryClient();
   const { isAdmin, loading } = useRoles();
-  const [vals, setVals] = useState({ kie_ai_api_key: "", kie_ai_base_url: "", kie_ai_model: "" });
+  const [vals, setVals] = useState({ kie_ai_api_key: "", kie_ai_base_url: "", kie_ai_model: "", kie_ai_embedding_model: "" });
 
   const { data: settings } = useQuery({
     queryKey: ["app_settings"],
@@ -32,6 +32,7 @@ function SettingsPage() {
       kie_ai_api_key: map.kie_ai_api_key ?? "",
       kie_ai_base_url: map.kie_ai_base_url ?? "",
       kie_ai_model: map.kie_ai_model ?? "",
+      kie_ai_embedding_model: map.kie_ai_embedding_model ?? "text-embedding-3-small",
     });
   }, [settings]);
 
@@ -73,8 +74,13 @@ function SettingsPage() {
               <Input value={vals.kie_ai_base_url} onChange={(e) => setVals({ ...vals, kie_ai_base_url: e.target.value })} placeholder="https://api.kie.ai/v1" />
             </div>
             <div>
-              <Label>Model</Label>
+              <Label>Model chat (sinh giáo án / try-out)</Label>
               <Input value={vals.kie_ai_model} onChange={(e) => setVals({ ...vals, kie_ai_model: e.target.value })} placeholder="opus-4.8" />
+            </div>
+            <div>
+              <Label>Model embedding (RAG thư viện)</Label>
+              <Input value={vals.kie_ai_embedding_model} onChange={(e) => setVals({ ...vals, kie_ai_embedding_model: e.target.value })} placeholder="text-embedding-3-small" />
+              <p className="text-xs text-muted-foreground mt-1">Phải trả về vector 1536 chiều. Khi đổi model, bấm "Lập lại chỉ mục" cho từng tài liệu trong Thư viện.</p>
             </div>
             <Button onClick={save}><Save className="size-4" /> Lưu cài đặt</Button>
           </CardContent>

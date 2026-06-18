@@ -70,6 +70,19 @@ function LibraryPage() {
     return () => { supabase.removeChannel(ch); };
   }, [qc]);
 
+  // Auto-enqueue any documents still in `pending` (e.g. existing rows after the RAG migration, or after the kie.ai key is set).
+  // Idempotent: the edge function wipes any prior chunks before re-running.
+  const enqueuedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const d of docs as any[]) {
+      if (d.ingest_status === "pending" && !enqueuedRef.current.has(d.id)) {
+        enqueuedRef.current.add(d.id);
+        ingest(d.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs]);
+
   async function ingest(documentId: string) {
     const { error } = await supabase.functions.invoke("ingest-library-doc", {
       body: { document_id: documentId },
@@ -141,7 +154,7 @@ function LibraryPage() {
             <DialogContent>
               <DialogHeader><DialogTitle>Tài liệu mới</DialogTitle></DialogHeader>
               <form onSubmit={upload} className="space-y-3">
-                <div><Label>Tệp (PDF, TXT, MD)</Label><Input ref={fileRef} type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" required /></div>
+                <div><Label>Tệp (PDF, DOCX, TXT, MD)</Label><Input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" required /></div>
                 <div><Label>Tiêu đề</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Mặc định: tên tệp" /></div>
                 <div><Label>Mô tả ngắn</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
                 <p className="text-xs text-muted-foreground">Sau khi tải lên, hệ thống sẽ tự động trích xuất văn bản, chia đoạn và tạo vector ngữ nghĩa để AI tham chiếu.</p>

@@ -9,10 +9,13 @@ const GenSchema = z.object({
   studentId: z.string().uuid().optional(),
 });
 
-type Settings = { apiKey: string; baseUrl: string; model: string };
+type Settings = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  embeddingModel: string;
+};
 
-const EMBED_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
-const EMBED_MODEL = "google/gemini-embedding-001";
 const EMBED_DIM = 1536;
 const RETRIEVAL_TOP_K = 6;
 const RETRIEVAL_THRESHOLD = 0.2;
@@ -22,48 +25,63 @@ async function loadSettings(supabase: any): Promise<Settings> {
   const { data, error } = await supabase
     .from("app_settings")
     .select("key,value")
-    .in("key", ["kie_ai_api_key", "kie_ai_base_url", "kie_ai_model"]);
+    .in("key", [
+      "kie_ai_api_key",
+      "kie_ai_base_url",
+      "kie_ai_model",
+      "kie_ai_embedding_model",
+    ]);
   if (error) throw new Error("Không đọc được cấu hình kie.ai");
   const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, r.value]));
   return {
     apiKey: map.kie_ai_api_key ?? "",
     baseUrl: map.kie_ai_base_url ?? "https://api.kie.ai/v1",
     model: map.kie_ai_model ?? "opus-4.8",
+    embeddingModel: map.kie_ai_embedding_model ?? "text-embedding-3-small",
   };
 }
 
-async function embedQuery(text: string): Promise<number[] | null> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) return null;
+async function embedQuery(text: string, s: Settings): Promise<number[] | null> {
+  if (!s.apiKey || s.apiKey === "PLACEHOLDER_REPLACE_ME") return null;
   try {
-    const resp = await fetch(EMBED_URL, {
+    const url = `${s.baseUrl.replace(/\/$/, "")}/embeddings`;
+    const resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
-      body: JSON.stringify({ model: EMBED_MODEL, input: text, dimensions: EMBED_DIM }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${s.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: s.embeddingModel,
+        input: text,
+        dimensions: EMBED_DIM,
+      }),
     });
     if (!resp.ok) return null;
     const json: any = await resp.json();
-    return json?.data?.[0]?.embedding ?? null;
+    const v = json?.data?.[0]?.embedding;
+    if (!Array.isArray(v) || v.length !== EMBED_DIM) return null;
+    return v;
   } catch {
     return null;
   }
 }
 
-async function retrieveContext(supabase: any, query: string): Promise<string> {
-  const embedding = await embedQuery(query);
-  if (!embedding) {
-    // Fallback: titles + descriptions
-    const { data: lib } = await supabase
-      .from("library_documents")
-      .select("title,description")
-      .eq("ingest_status", "done")
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (!lib || lib.length === 0) return "";
-    return `\n--- Tài liệu tham khảo (tiêu đề) ---\n${lib
-      .map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`)
-      .join("\n")}\n---`;
-  }
+async function titleFallback(supabase: any): Promise<string> {
+  const { data: lib } = await supabase
+    .from("library_documents")
+    .select("title,description")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (!lib || lib.length === 0) return "";
+  return `\n--- Tài liệu tham khảo (tiêu đề) ---\n${lib
+    .map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`)
+    .join("\n")}\n---`;
+}
+
+async function retrieveContext(supabase: any, query: string, s: Settings): Promise<string> {
+  const embedding = await embedQuery(query, s);
+  if (!embedding) return await titleFallback(supabase);
 
   const { data: hits, error } = await supabase.rpc("match_document_chunks", {
     query_embedding: embedding as any,
@@ -71,20 +89,8 @@ async function retrieveContext(supabase: any, query: string): Promise<string> {
     similarity_threshold: RETRIEVAL_THRESHOLD,
   });
 
-  if (error || !hits || hits.length === 0) {
-    // Fallback to title list if no semantic hits
-    const { data: lib } = await supabase
-      .from("library_documents")
-      .select("title,description")
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (!lib || lib.length === 0) return "";
-    return `\n--- Tài liệu tham khảo (tiêu đề) ---\n${lib
-      .map((d: any) => `• ${d.title}${d.description ? ": " + d.description : ""}`)
-      .join("\n")}\n---`;
-  }
+  if (error || !hits || hits.length === 0) return await titleFallback(supabase);
 
-  // Pack passages until budget exhausted
   let used = 0;
   const parts: string[] = [];
   for (const h of hits) {
@@ -144,9 +150,8 @@ export const generateWithKieAi = createServerFn({ method: "POST" })
       throw new Error("API key của kie.ai chưa được cấu hình. Vui lòng vào trang Cài đặt (Admin) để nhập API key thật.");
     }
 
-    // Semantic retrieval over uploaded library content
     const retrievalQuery = buildRetrievalQuery(data.type, data.target, data.extraContext);
-    const libRefs = await retrieveContext(supabase, retrievalQuery);
+    const libRefs = await retrieveContext(supabase, retrievalQuery, settings);
 
     const prompt = buildPrompt(data.type, data.target, libRefs, data.extraContext);
 

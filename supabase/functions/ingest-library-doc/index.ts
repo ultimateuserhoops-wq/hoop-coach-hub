@@ -1,37 +1,47 @@
 // Supabase Edge Function — extract text from an uploaded library document,
-// chunk it, embed each chunk via the Lovable AI Gateway, and store the
+// chunk it, embed each chunk via the kie.ai OpenAI-compatible /embeddings
+// endpoint (key + base URL + model read from app_settings), and store the
 // vectors in public.document_chunks for semantic retrieval.
-//
-// Triggered from the frontend after upload, or from the "Lập lại chỉ mục"
-// button. Requires a signed-in user (verify_jwt defaults to true).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
+import mammoth from "https://esm.sh/mammoth@1.8.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-const EMBED_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
-const EMBED_MODEL = "google/gemini-embedding-001";
 const EMBED_DIM = 1536;
-
 const TARGET_CHARS = 4000; // ~1000 tokens
 const OVERLAP_CHARS = 480; // ~120 tokens
 const MAX_PAGES = 600;
 const EMBED_BATCH = 16;
+const CHUNK_BUDGET_PER_INVOCATION = 200; // resume after this many chunks to dodge timeouts
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type EmbedSettings = { apiKey: string; baseUrl: string; model: string };
+
+async function loadEmbedSettings(supabase: any): Promise<EmbedSettings> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("key,value")
+    .in("key", ["kie_ai_api_key", "kie_ai_base_url", "kie_ai_embedding_model"]);
+  if (error) throw new Error("Không đọc được cấu hình kie.ai");
+  const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, r.value]));
+  return {
+    apiKey: map.kie_ai_api_key ?? "",
+    baseUrl: map.kie_ai_base_url ?? "https://api.kie.ai/v1",
+    model: map.kie_ai_embedding_model ?? "text-embedding-3-small",
+  };
+}
+
 function chunkText(raw: string, title: string) {
-  // Normalize whitespace
   const text = raw.replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   if (!text) return [];
 
-  // Split on paragraph boundaries, then pack into ~TARGET_CHARS windows with overlap.
   const paragraphs = text.split(/\n{2,}/);
   const chunks: { content: string; token_estimate: number }[] = [];
   let buf = "";
@@ -45,13 +55,11 @@ function chunkText(raw: string, title: string) {
   for (const p of paragraphs) {
     if ((buf + "\n\n" + p).length > TARGET_CHARS && buf.length > 0) {
       flush();
-      // Start next buffer with tail overlap of previous content
       const tail = buf.slice(Math.max(0, buf.length - OVERLAP_CHARS));
       buf = tail + "\n\n" + p;
     } else {
       buf = buf ? buf + "\n\n" + p : p;
     }
-    // If a single paragraph is huge, hard-split
     while (buf.length > TARGET_CHARS * 1.5) {
       const slice = buf.slice(0, TARGET_CHARS);
       chunks.push({ content: slice.trim(), token_estimate: Math.ceil(slice.length / 4) });
@@ -63,29 +71,38 @@ function chunkText(raw: string, title: string) {
   return chunks.map((c, i) => ({ ...c, chunk_index: i, source_title: title }));
 }
 
-async function embedBatch(texts: string[]): Promise<number[][]> {
-  const resp = await fetch(EMBED_URL, {
+async function embedBatch(texts: string[], s: EmbedSettings): Promise<number[][]> {
+  const url = `${s.baseUrl.replace(/\/$/, "")}/embeddings`;
+  const resp = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Lovable-API-Key": LOVABLE_API_KEY,
+      Authorization: `Bearer ${s.apiKey}`,
     },
     body: JSON.stringify({
-      model: EMBED_MODEL,
+      model: s.model,
       input: texts,
+      // text-embedding-3-* supports dimensions truncation; other models may ignore
       dimensions: EMBED_DIM,
     }),
   });
   if (!resp.ok) {
     const t = await resp.text();
-    throw new Error(`Embedding API ${resp.status}: ${t.slice(0, 300)}`);
+    throw new Error(`kie.ai /embeddings ${resp.status}: ${t.slice(0, 300)}`);
   }
   const json: any = await resp.json();
   if (!Array.isArray(json.data)) throw new Error("Phản hồi embedding không hợp lệ");
-  // Make sure they come back in input order
-  return json.data
+  const vectors = json.data
     .sort((a: any, b: any) => a.index - b.index)
     .map((d: any) => d.embedding as number[]);
+  // Validate dimension; if model returns a different dim, fail fast with a clear message
+  if (vectors[0] && vectors[0].length !== EMBED_DIM) {
+    throw new Error(
+      `Embedding model "${s.model}" trả về ${vectors[0].length} chiều, hệ thống yêu cầu ${EMBED_DIM}. ` +
+      `Vui lòng chọn model embedding 1536 chiều (ví dụ text-embedding-3-small) trong Cài đặt.`
+    );
+  }
+  return vectors;
 }
 
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
@@ -98,16 +115,43 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   return Array.isArray(text) ? text.join("\n\n") : (text as string);
 }
 
+async function extractDocxText(bytes: Uint8Array): Promise<string> {
+  // mammoth expects an ArrayBuffer in Node mode
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const result = await mammoth.extractRawText({ arrayBuffer: buffer as ArrayBuffer });
+  return result.value ?? "";
+}
+
 async function extractByType(bytes: Uint8Array, fileType: string | null, path: string): Promise<string> {
   const lowerPath = path.toLowerCase();
   if ((fileType && fileType.includes("pdf")) || lowerPath.endsWith(".pdf")) {
     return await extractPdfText(bytes);
   }
+  if ((fileType && fileType.includes("officedocument.wordprocessingml")) || lowerPath.endsWith(".docx")) {
+    return await extractDocxText(bytes);
+  }
   if ((fileType && (fileType.startsWith("text/") || fileType.includes("markdown"))) ||
       lowerPath.endsWith(".txt") || lowerPath.endsWith(".md")) {
     return new TextDecoder("utf-8").decode(bytes);
   }
-  throw new Error("Định dạng tệp chưa hỗ trợ. Hiện chỉ nhận PDF, TXT, MD.");
+  throw new Error("Định dạng tệp chưa hỗ trợ. Hiện chỉ nhận PDF, DOCX, TXT, MD.");
+}
+
+async function selfReinvoke(documentId: string, resumeFromChunk: number, authHeader: string | null) {
+  // Best-effort fire-and-forget; the function URL is the same as the current request
+  const url = `${SUPABASE_URL}/functions/v1/ingest-library-doc`;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
+      body: JSON.stringify({ document_id: documentId, resume_from_chunk: resumeFromChunk }),
+    });
+  } catch (e) {
+    console.error("self-reinvoke failed", e);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -115,10 +159,13 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
   let documentId: string | undefined;
+  const startedAt = Date.now();
+  const SOFT_TIME_BUDGET_MS = 120_000;
 
   try {
     const body = await req.json();
     documentId = body.document_id;
+    const resumeFromChunk: number = Number.isInteger(body.resume_from_chunk) ? body.resume_from_chunk : 0;
     if (!documentId) throw new Error("Thiếu document_id");
 
     const { data: doc, error: docErr } = await supabase
@@ -128,13 +175,31 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (docErr || !doc) throw new Error("Không tìm thấy tài liệu");
 
+    // Validate kie.ai key BEFORE marking processing, so failure messaging is clear
+    const settings = await loadEmbedSettings(supabase);
+    if (!settings.apiKey || settings.apiKey === "PLACEHOLDER_REPLACE_ME") {
+      await supabase
+        .from("library_documents")
+        .update({
+          ingest_status: "failed",
+          ingest_error: "Chưa cấu hình khóa kie.ai — nhập khóa trong Cài đặt rồi bấm Lập lại chỉ mục.",
+        })
+        .eq("id", documentId);
+      return new Response(JSON.stringify({ ok: false, reason: "missing_key" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     await supabase
       .from("library_documents")
       .update({ ingest_status: "processing", ingest_error: null })
       .eq("id", documentId);
 
-    // Wipe any previous chunks (re-index path)
-    await supabase.from("document_chunks").delete().eq("document_id", documentId);
+    // On a fresh ingestion run (resume == 0), wipe existing chunks
+    if (resumeFromChunk === 0) {
+      await supabase.from("document_chunks").delete().eq("document_id", documentId);
+    }
 
     const { data: file, error: dlErr } = await supabase.storage.from("library").download(doc.storage_path);
     if (dlErr || !file) throw new Error(`Không tải được tệp: ${dlErr?.message ?? "unknown"}`);
@@ -158,35 +223,55 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Embed in batches, insert rolling
-    let inserted = 0;
-    for (let i = 0; i < chunks.length; i += EMBED_BATCH) {
+    let processedThisRun = 0;
+    let nextChunkIndex = resumeFromChunk;
+
+    for (let i = resumeFromChunk; i < chunks.length; i += EMBED_BATCH) {
+      // Resume if running out of CPU budget or chunk count budget
+      if (
+        Date.now() - startedAt > SOFT_TIME_BUDGET_MS ||
+        processedThisRun >= CHUNK_BUDGET_PER_INVOCATION
+      ) {
+        await selfReinvoke(documentId, nextChunkIndex, req.headers.get("Authorization"));
+        return new Response(JSON.stringify({ ok: true, resumed_at: nextChunkIndex }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const batch = chunks.slice(i, i + EMBED_BATCH);
-      const vectors = await embedBatch(batch.map((c) => c.content));
+      const vectors = await embedBatch(batch.map((c) => c.content), settings);
       const rows = batch.map((c, j) => ({
         document_id: documentId,
         chunk_index: c.chunk_index,
         source_title: c.source_title,
         content: c.content,
         token_estimate: c.token_estimate,
-        embedding: vectors[j] as any, // pgvector accepts JSON array
+        embedding: vectors[j] as any,
       }));
       const { error: insErr } = await supabase.from("document_chunks").insert(rows);
       if (insErr) throw new Error(`Lỗi lưu chunk: ${insErr.message}`);
-      inserted += rows.length;
+      processedThisRun += rows.length;
+      nextChunkIndex = i + EMBED_BATCH;
     }
+
+    // Done — count actual rows
+    const { count } = await supabase
+      .from("document_chunks")
+      .select("id", { count: "exact", head: true })
+      .eq("document_id", documentId);
 
     await supabase
       .from("library_documents")
       .update({
         ingest_status: "done",
         ingest_error: null,
-        chunk_count: inserted,
+        chunk_count: count ?? chunks.length,
         ingested_at: new Date().toISOString(),
       })
       .eq("id", documentId);
 
-    return new Response(JSON.stringify({ ok: true, chunks: inserted }), {
+    return new Response(JSON.stringify({ ok: true, chunks: count ?? chunks.length }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -195,7 +280,10 @@ Deno.serve(async (req) => {
     if (documentId) {
       await supabase
         .from("library_documents")
-        .update({ ingest_status: "failed", ingest_error: String(e.message ?? e).slice(0, 500) })
+        .update({
+          ingest_status: "failed",
+          ingest_error: String(e.message ?? e).slice(0, 500),
+        })
         .eq("id", documentId);
     }
     return new Response(JSON.stringify({ ok: false, error: String(e.message ?? e) }), {
