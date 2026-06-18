@@ -49,9 +49,9 @@ function Landing() {
         <h2 className="font-display text-3xl md:text-4xl uppercase mb-10">Tính năng cốt lõi</h2>
         <div className="grid md:grid-cols-3 gap-6">
           {[
-            { i: BookOpen, t: "AI Soạn giáo án", d: "Sinh giáo án 8 tuần cho 3 trình độ Cơ bản / Trung cấp / Nâng cao với mô hình Opus 4.8 và tài liệu thư viện BDC." },
-            { i: ClipboardList, t: "Try-out Elite U10–U15", d: "Trợ lý AI thiết kế phương án tuyển chọn theo nhóm tuổi: drill, thang điểm, quy trình." },
-            { i: Users, t: "Theo dõi tiến bộ", d: "Database học viên, biểu đồ test theo thời gian, thông báo Zalo cho phụ huynh." },
+            { i: BookOpen, t: "XÂY DỰNG CHƯƠNG TRÌNH", d: "Sinh giáo án 8 tuần cho 3 trình độ Cơ bản / Trung cấp / Nâng cao với mô hình Opus 4.8 và tài liệu thư viện BDC." },
+            { i: ClipboardList, t: "TRY OUT ELITE TEAM", d: "Trợ lý AI thiết kế phương án tuyển chọn theo nhóm tuổi: drill, thang điểm, quy trình." },
+            { i: Users, t: "KIỂM TRA ĐÁNH GIÁ", d: "Database học viên, biểu đồ test theo thời gian, thông báo Zalo cho phụ huynh." },
           ].map((f) => (
             <div key={f.t} className="rounded-xl border bg-card p-6 hover:shadow-court transition-shadow">
               <div className="size-12 rounded-lg bg-accent flex items-center justify-center mb-4"><f.i className="size-6 text-primary" /></div>
