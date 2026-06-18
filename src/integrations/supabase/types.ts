@@ -109,33 +109,86 @@ export type Database = {
         }
         Relationships: []
       }
+      document_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string
+          id: string
+          source_title: string
+          token_estimate: number
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          document_id: string
+          embedding: string
+          id?: string
+          source_title: string
+          token_estimate?: number
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string
+          id?: string
+          source_title?: string
+          token_estimate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "library_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_documents: {
         Row: {
+          chunk_count: number
           created_at: string
           description: string | null
           file_size: number | null
           file_type: string | null
           id: string
+          ingest_error: string | null
+          ingest_status: string
+          ingested_at: string | null
           storage_path: string
           title: string
           uploaded_by: string | null
         }
         Insert: {
+          chunk_count?: number
           created_at?: string
           description?: string | null
           file_size?: number | null
           file_type?: string | null
           id?: string
+          ingest_error?: string | null
+          ingest_status?: string
+          ingested_at?: string | null
           storage_path: string
           title: string
           uploaded_by?: string | null
         }
         Update: {
+          chunk_count?: number
           created_at?: string
           description?: string | null
           file_size?: number | null
           file_type?: string | null
           id?: string
+          ingest_error?: string | null
+          ingest_status?: string
+          ingested_at?: string | null
           storage_path?: string
           title?: string
           uploaded_by?: string | null
@@ -328,6 +381,20 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_document_chunks: {
+        Args: {
+          match_count?: number
+          query_embedding: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          content: string
+          document_id: string
+          id: string
+          similarity: number
+          source_title: string
+        }[]
       }
     }
     Enums: {
