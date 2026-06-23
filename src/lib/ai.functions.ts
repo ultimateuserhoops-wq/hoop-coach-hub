@@ -192,7 +192,7 @@ export const generateWithKieAi = createServerFn({ method: "POST" })
 
     await supabase.from("ai_generations").insert({
       coach_id: userId,
-      generation_type: data.type,
+      generation_type: (data.type === "research" ? "tryout" : data.type) as any,
       target_label: data.target,
       prompt,
       response: aiText,
