@@ -109,6 +109,39 @@ export type Database = {
         }
         Relationships: []
       }
+      creations: {
+        Row: {
+          coach_id: string
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id?: string
+          content: string
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       document_chunks: {
         Row: {
           chunk_index: number
@@ -146,6 +179,35 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "library_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_completions: {
+        Row: {
+          completed_at: string | null
+          exercise_id: string | null
+          id: string
+          note: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_completions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "program_exercises"
             referencedColumns: ["id"]
           },
         ]
@@ -221,6 +283,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      program_exercises: {
+        Row: {
+          category: string
+          created_at: string | null
+          day_label: string
+          exercise_name: string
+          id: string
+          notes: string | null
+          program_id: string | null
+          sets_reps: string | null
+          sort_order: number | null
+          youtube_fetched_at: string | null
+          youtube_videos: Json | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          day_label: string
+          exercise_name: string
+          id?: string
+          notes?: string | null
+          program_id?: string | null
+          sets_reps?: string | null
+          sort_order?: number | null
+          youtube_fetched_at?: string | null
+          youtube_videos?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          day_label?: string
+          exercise_name?: string
+          id?: string
+          notes?: string | null
+          program_id?: string | null
+          sets_reps?: string | null
+          sort_order?: number | null
+          youtube_fetched_at?: string | null
+          youtube_videos?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_exercises_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "training_programs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       skill_categories: {
         Row: {
@@ -339,6 +451,36 @@ export type Database = {
           },
         ]
       }
+      training_programs: {
+        Row: {
+          athlete_name: string
+          created_at: string | null
+          id: string
+          program_json: Json
+          telegram_recipient: string | null
+          telegram_sent_at: string | null
+          test_title: string
+        }
+        Insert: {
+          athlete_name: string
+          created_at?: string | null
+          id?: string
+          program_json: Json
+          telegram_recipient?: string | null
+          telegram_sent_at?: string | null
+          test_title: string
+        }
+        Update: {
+          athlete_name?: string
+          created_at?: string | null
+          id?: string
+          program_json?: Json
+          telegram_recipient?: string | null
+          telegram_sent_at?: string | null
+          test_title?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -359,6 +501,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      youtube_verifications: {
+        Row: {
+          exercise_id: string | null
+          id: string
+          is_approved: boolean
+          verified_at: string | null
+          video_id: string
+        }
+        Insert: {
+          exercise_id?: string | null
+          id?: string
+          is_approved: boolean
+          verified_at?: string | null
+          video_id: string
+        }
+        Update: {
+          exercise_id?: string | null
+          id?: string
+          is_approved?: boolean
+          verified_at?: string | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_verifications_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "program_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -398,7 +572,12 @@ export type Database = {
       }
     }
     Enums: {
-      ai_generation_type: "curriculum" | "tryout" | "recommendation"
+      ai_generation_type:
+        | "curriculum"
+        | "tryout"
+        | "recommendation"
+        | "strength"
+        | "hybrid"
       app_role: "admin" | "coach"
       student_level: "beginner" | "intermediate" | "advanced"
     }
@@ -528,7 +707,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      ai_generation_type: ["curriculum", "tryout", "recommendation"],
+      ai_generation_type: [
+        "curriculum",
+        "tryout",
+        "recommendation",
+        "strength",
+        "hybrid",
+      ],
       app_role: ["admin", "coach"],
       student_level: ["beginner", "intermediate", "advanced"],
     },
