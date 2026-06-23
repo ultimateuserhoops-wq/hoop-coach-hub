@@ -3,10 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GenSchema = z.object({
-  type: z.enum(["curriculum", "tryout", "recommendation"]),
+  type: z.enum(["curriculum", "tryout", "recommendation", "research"]),
   target: z.string().min(1).max(120),
   extraContext: z.string().max(4000).optional(),
   studentId: z.string().uuid().optional(),
+  selectedSourceTitles: z.array(z.string().max(300)).max(200).optional(),
+  useWebResearch: z.boolean().optional(),
+  testName: z.string().max(200).optional(),
+  level: z.string().max(60).optional(),
 });
 
 type Settings = {
