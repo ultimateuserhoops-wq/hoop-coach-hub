@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Save, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +18,15 @@ export const Route = createFileRoute("/_authenticated/settings")({ component: Se
 function SettingsPage() {
   const qc = useQueryClient();
   const { isAdmin, loading } = useRoles();
-  const [vals, setVals] = useState({ kie_ai_api_key: "", kie_ai_base_url: "", kie_ai_model: "", kie_ai_embedding_model: "" });
+  const [vals, setVals] = useState({
+    ai_provider: "kie",
+    kie_ai_api_key: "",
+    kie_ai_base_url: "",
+    kie_ai_model: "",
+    kie_ai_embedding_model: "",
+    anthropic_api_key: "",
+    anthropic_model: "",
+  });
 
   const { data: settings } = useQuery({
     queryKey: ["app_settings"],
@@ -29,10 +38,13 @@ function SettingsPage() {
     if (!settings) return;
     const map: any = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
     setVals({
+      ai_provider: map.ai_provider === "anthropic" ? "anthropic" : "kie",
       kie_ai_api_key: map.kie_ai_api_key ?? "",
       kie_ai_base_url: map.kie_ai_base_url ?? "",
       kie_ai_model: map.kie_ai_model ?? "",
       kie_ai_embedding_model: map.kie_ai_embedding_model ?? "text-embedding-3-small",
+      anthropic_api_key: map.anthropic_api_key ?? "",
+      anthropic_model: map.anthropic_model ?? "claude-opus-4-8",
     });
   }, [settings]);
 
@@ -48,21 +60,58 @@ function SettingsPage() {
   if (loading) return <div className="p-6">Đang tải…</div>;
   if (!isAdmin) return <div className="p-6 text-muted-foreground">Chỉ Admin mới truy cập được trang Cài đặt.</div>;
 
-  const isPlaceholder = vals.kie_ai_api_key === "PLACEHOLDER_REPLACE_ME" || !vals.kie_ai_api_key;
+  const isAnthropic = vals.ai_provider === "anthropic";
+  const activeKey = isAnthropic ? vals.anthropic_api_key : vals.kie_ai_api_key;
+  const isPlaceholder = activeKey === "PLACEHOLDER_REPLACE_ME" || !activeKey;
 
   return (
     <>
-      <PageHeader title="Cài đặt" subtitle="Cấu hình tích hợp AI kie.ai" />
+      <PageHeader title="Cài đặt" subtitle="Cấu hình tích hợp AI (kie.ai hoặc Anthropic)" />
       <div className="p-6 max-w-2xl space-y-6">
         {isPlaceholder && (
           <Alert variant="destructive">
             <AlertTriangle className="size-4" />
-            <AlertTitle>API key đang là PLACEHOLDER</AlertTitle>
-            <AlertDescription>Các tính năng AI sẽ báo lỗi cho đến khi bạn nhập API key thật của kie.ai bên dưới.</AlertDescription>
+            <AlertTitle>Chưa cấu hình API key cho nhà cung cấp đang chọn</AlertTitle>
+            <AlertDescription>Các tính năng AI sẽ báo lỗi cho đến khi bạn nhập API key thật của {isAnthropic ? "Anthropic" : "kie.ai"} bên dưới.</AlertDescription>
           </Alert>
         )}
         <Card>
-          <CardHeader><CardTitle className="font-display">Tích hợp kie.ai</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="font-display">Nhà cung cấp AI</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Nhà cung cấp cho sinh giáo án / try-out</Label>
+              <Select value={vals.ai_provider} onValueChange={(v) => setVals({ ...vals, ai_provider: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kie">kie.ai (rẻ hơn, giới hạn ~8192 token/lần)</SelectItem>
+                  <SelectItem value="anthropic">Anthropic trực tiếp (ổn định, tối đa 128k token)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Embedding (RAG thư viện) luôn dùng kie.ai — Anthropic không có embedding.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isAnthropic && (
+          <Card>
+            <CardHeader><CardTitle className="font-display">Anthropic API (Opus 4.8)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Anthropic API Key</Label>
+                <Input type="password" value={vals.anthropic_api_key} onChange={(e) => setVals({ ...vals, anthropic_api_key: e.target.value })} placeholder="sk-ant-…" />
+                <p className="text-xs text-muted-foreground mt-1">Lấy tại console.anthropic.com. Tính phí ~$5/1M token vào, $25/1M token ra.</p>
+              </div>
+              <div>
+                <Label>Model</Label>
+                <Input value={vals.anthropic_model} onChange={(e) => setVals({ ...vals, anthropic_model: e.target.value })} placeholder="claude-opus-4-8" />
+              </div>
+              <Button onClick={save}><Save className="size-4" /> Lưu cài đặt</Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader><CardTitle className="font-display">Tích hợp kie.ai{isAnthropic ? " (chat dự phòng + embedding)" : ""}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label>API Key</Label>

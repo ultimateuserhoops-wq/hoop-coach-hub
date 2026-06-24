@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
-import { ArrowLeft, MessageCircle, Plus, Sparkles, Copy } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Sparkles } from "lucide-react";
+import { MarkdownReport } from "@/components/MarkdownReport";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/students/$id")({ component: StudentDetail });
@@ -184,10 +185,9 @@ function StudentDetail() {
               <DialogContent className="max-w-3xl">
                 <DialogHeader><DialogTitle>Lộ trình AI đề xuất</DialogTitle></DialogHeader>
                 {aiLoading ? <div className="py-12 text-center text-muted-foreground">Đang gọi AI…</div> : (
-                  <>
-                    <pre className="whitespace-pre-wrap text-sm max-h-[60vh] overflow-auto bg-muted p-4 rounded">{aiText || "—"}</pre>
-                    <Button onClick={() => { navigator.clipboard.writeText(aiText); toast.success("Đã sao chép"); }} variant="outline" size="sm"><Copy className="size-4" /> Sao chép</Button>
-                  </>
+                  aiText
+                    ? <MarkdownReport title={`Gợi ý AI — ${student.full_name}`} content={aiText} />
+                    : <div className="py-8 text-center text-muted-foreground">—</div>
                 )}
               </DialogContent>
             </Dialog>

@@ -9,7 +9,11 @@ import mammoth from "https://esm.sh/mammoth@1.8.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 
+// Embeddings via the Lovable AI Gateway (gemini-embedding-001 truncated to 1536).
+const GATEWAY = "https://ai.gateway.lovable.dev/v1/embeddings";
+const EMBED_MODEL = "google/gemini-embedding-001";
 const EMBED_DIM = 1536;
 const TARGET_CHARS = 4000; // ~1000 tokens
 const OVERLAP_CHARS = 480; // ~120 tokens
@@ -71,24 +75,22 @@ function chunkText(raw: string, title: string) {
   return chunks.map((c, i) => ({ ...c, chunk_index: i, source_title: title }));
 }
 
-async function embedBatch(texts: string[], s: EmbedSettings): Promise<number[][]> {
-  const url = `${s.baseUrl.replace(/\/$/, "")}/embeddings`;
-  const resp = await fetch(url, {
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  const resp = await fetch(GATEWAY, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${s.apiKey}`,
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
     },
     body: JSON.stringify({
-      model: s.model,
+      model: EMBED_MODEL,
       input: texts,
-      // text-embedding-3-* supports dimensions truncation; other models may ignore
-      dimensions: EMBED_DIM,
+      dimensions: EMBED_DIM, // gemini-embedding-001 supports MRL truncation to 1536
     }),
   });
   if (!resp.ok) {
     const t = await resp.text();
-    throw new Error(`kie.ai /embeddings ${resp.status}: ${t.slice(0, 300)}`);
+    throw new Error(`Lovable Gateway /embeddings ${resp.status}: ${t.slice(0, 300)}`);
   }
   const json: any = await resp.json();
   if (!Array.isArray(json.data)) throw new Error("Phản hồi embedding không hợp lệ");
@@ -175,14 +177,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (docErr || !doc) throw new Error("Không tìm thấy tài liệu");
 
-    // Validate kie.ai key BEFORE marking processing, so failure messaging is clear
-    const settings = await loadEmbedSettings(supabase);
-    if (!settings.apiKey || settings.apiKey === "PLACEHOLDER_REPLACE_ME") {
+    // The Lovable Gateway key is auto-provisioned for edge functions; verify it.
+    if (!LOVABLE_API_KEY) {
       await supabase
         .from("library_documents")
         .update({
           ingest_status: "failed",
-          ingest_error: "Chưa cấu hình khóa kie.ai — nhập khóa trong Cài đặt rồi bấm Lập lại chỉ mục.",
+          ingest_error: "Thiếu LOVABLE_API_KEY trên Lovable Cloud — không thể tạo embedding.",
         })
         .eq("id", documentId);
       return new Response(JSON.stringify({ ok: false, reason: "missing_key" }), {
@@ -240,7 +241,7 @@ Deno.serve(async (req) => {
       }
 
       const batch = chunks.slice(i, i + EMBED_BATCH);
-      const vectors = await embedBatch(batch.map((c) => c.content), settings);
+      const vectors = await embedBatch(batch.map((c) => c.content));
       const rows = batch.map((c, j) => ({
         document_id: documentId,
         chunk_index: c.chunk_index,

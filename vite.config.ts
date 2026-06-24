@@ -12,4 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Enable Nitro's cloudflare-module preset for Cloudflare Workers deploy.
+  // Keep the date in the PAST — Cloudflare rejects future compatibility_date (error 10021).
+  nitro: { compatibilityDate: "2026-06-13" },
 });

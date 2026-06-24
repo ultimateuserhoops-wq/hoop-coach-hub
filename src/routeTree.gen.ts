@@ -15,14 +15,29 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTryoutsRouteImport } from './routes/_authenticated/tryouts'
+import { Route as AuthenticatedStrengthRouteImport } from './routes/_authenticated/strength'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedHybridRouteImport } from './routes/_authenticated/hybrid'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCurriculumRouteImport } from './routes/_authenticated/curriculum'
+import { Route as AuthenticatedCreationsRouteImport } from './routes/_authenticated/creations'
 import { Route as AuthenticatedCoachesRouteImport } from './routes/_authenticated/coaches'
 import { Route as AuthenticatedStudentsIndexRouteImport } from './routes/_authenticated/students.index'
+import { Route as ApiTelegramWebhookRouteImport } from './routes/api/telegram/webhook'
+import { Route as ApiPublicLibraryRouteImport } from './routes/api/public/library'
 import { Route as ApiPublicCoachOfTheMonthRouteImport } from './routes/api/public/coach-of-the-month'
+import { Route as ApiInternalYoutubeFetchRouteImport } from './routes/api/internal/youtube-fetch'
+import { Route as ApiInternalTelegramRouteImport } from './routes/api/internal/telegram'
+import { Route as ApiInternalProgramsRouteImport } from './routes/api/internal/programs'
+import { Route as ApiCoachProgramsRouteImport } from './routes/api/coach/programs'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students.$id'
+import { Route as ApiPublicProgramIdRouteImport } from './routes/api/public/program.$id'
+import { Route as ApiCoachLoginVerifyRouteImport } from './routes/api/coach/login/verify'
+import { Route as ApiCoachLoginRequestRouteImport } from './routes/api/coach/login/request'
+import { Route as ApiPublicProgramIdCompleteRouteImport } from './routes/api/public/program.$id.complete'
+import { Route as ApiPublicLibraryIdChunksRouteImport } from './routes/api/public/library.$id.chunks'
+import { Route as ApiCoachExerciseIdVerifyRouteImport } from './routes/api/coach/exercise.$id.verify'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -53,6 +68,11 @@ const AuthenticatedTryoutsRoute = AuthenticatedTryoutsRouteImport.update({
   path: '/tryouts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStrengthRoute = AuthenticatedStrengthRouteImport.update({
+  id: '/strength',
+  path: '/strength',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -63,6 +83,11 @@ const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHybridRoute = AuthenticatedHybridRouteImport.update({
+  id: '/hybrid',
+  path: '/hybrid',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -71,6 +96,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedCurriculumRoute = AuthenticatedCurriculumRouteImport.update({
   id: '/curriculum',
   path: '/curriculum',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCreationsRoute = AuthenticatedCreationsRouteImport.update({
+  id: '/creations',
+  path: '/creations',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCoachesRoute = AuthenticatedCoachesRouteImport.update({
@@ -84,17 +114,80 @@ const AuthenticatedStudentsIndexRoute =
     path: '/students/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiTelegramWebhookRoute = ApiTelegramWebhookRouteImport.update({
+  id: '/api/telegram/webhook',
+  path: '/api/telegram/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicLibraryRoute = ApiPublicLibraryRouteImport.update({
+  id: '/api/public/library',
+  path: '/api/public/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCoachOfTheMonthRoute =
   ApiPublicCoachOfTheMonthRouteImport.update({
     id: '/api/public/coach-of-the-month',
     path: '/api/public/coach-of-the-month',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalYoutubeFetchRoute = ApiInternalYoutubeFetchRouteImport.update({
+  id: '/api/internal/youtube-fetch',
+  path: '/api/internal/youtube-fetch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalTelegramRoute = ApiInternalTelegramRouteImport.update({
+  id: '/api/internal/telegram',
+  path: '/api/internal/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalProgramsRoute = ApiInternalProgramsRouteImport.update({
+  id: '/api/internal/programs',
+  path: '/api/internal/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCoachProgramsRoute = ApiCoachProgramsRouteImport.update({
+  id: '/api/coach/programs',
+  path: '/api/coach/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStudentsIdRoute = AuthenticatedStudentsIdRouteImport.update({
   id: '/students/$id',
   path: '/students/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicProgramIdRoute = ApiPublicProgramIdRouteImport.update({
+  id: '/api/public/program/$id',
+  path: '/api/public/program/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCoachLoginVerifyRoute = ApiCoachLoginVerifyRouteImport.update({
+  id: '/api/coach/login/verify',
+  path: '/api/coach/login/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCoachLoginRequestRoute = ApiCoachLoginRequestRouteImport.update({
+  id: '/api/coach/login/request',
+  path: '/api/coach/login/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicProgramIdCompleteRoute =
+  ApiPublicProgramIdCompleteRouteImport.update({
+    id: '/complete',
+    path: '/complete',
+    getParentRoute: () => ApiPublicProgramIdRoute,
+  } as any)
+const ApiPublicLibraryIdChunksRoute =
+  ApiPublicLibraryIdChunksRouteImport.update({
+    id: '/$id/chunks',
+    path: '/$id/chunks',
+    getParentRoute: () => ApiPublicLibraryRoute,
+  } as any)
+const ApiCoachExerciseIdVerifyRoute =
+  ApiCoachExerciseIdVerifyRouteImport.update({
+    id: '/api/coach/exercise/$id/verify',
+    path: '/api/coach/exercise/$id/verify',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,14 +195,29 @@ export interface FileRoutesByFullPath {
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/coaches': typeof AuthenticatedCoachesRoute
+  '/creations': typeof AuthenticatedCreationsRoute
   '/curriculum': typeof AuthenticatedCurriculumRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/hybrid': typeof AuthenticatedHybridRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/strength': typeof AuthenticatedStrengthRoute
   '/tryouts': typeof AuthenticatedTryoutsRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/api/coach/programs': typeof ApiCoachProgramsRoute
+  '/api/internal/programs': typeof ApiInternalProgramsRoute
+  '/api/internal/telegram': typeof ApiInternalTelegramRoute
+  '/api/internal/youtube-fetch': typeof ApiInternalYoutubeFetchRoute
   '/api/public/coach-of-the-month': typeof ApiPublicCoachOfTheMonthRoute
+  '/api/public/library': typeof ApiPublicLibraryRouteWithChildren
+  '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/students/': typeof AuthenticatedStudentsIndexRoute
+  '/api/coach/login/request': typeof ApiCoachLoginRequestRoute
+  '/api/coach/login/verify': typeof ApiCoachLoginVerifyRoute
+  '/api/public/program/$id': typeof ApiPublicProgramIdRouteWithChildren
+  '/api/coach/exercise/$id/verify': typeof ApiCoachExerciseIdVerifyRoute
+  '/api/public/library/$id/chunks': typeof ApiPublicLibraryIdChunksRoute
+  '/api/public/program/$id/complete': typeof ApiPublicProgramIdCompleteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,14 +225,29 @@ export interface FileRoutesByTo {
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/coaches': typeof AuthenticatedCoachesRoute
+  '/creations': typeof AuthenticatedCreationsRoute
   '/curriculum': typeof AuthenticatedCurriculumRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/hybrid': typeof AuthenticatedHybridRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/strength': typeof AuthenticatedStrengthRoute
   '/tryouts': typeof AuthenticatedTryoutsRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/api/coach/programs': typeof ApiCoachProgramsRoute
+  '/api/internal/programs': typeof ApiInternalProgramsRoute
+  '/api/internal/telegram': typeof ApiInternalTelegramRoute
+  '/api/internal/youtube-fetch': typeof ApiInternalYoutubeFetchRoute
   '/api/public/coach-of-the-month': typeof ApiPublicCoachOfTheMonthRoute
+  '/api/public/library': typeof ApiPublicLibraryRouteWithChildren
+  '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/students': typeof AuthenticatedStudentsIndexRoute
+  '/api/coach/login/request': typeof ApiCoachLoginRequestRoute
+  '/api/coach/login/verify': typeof ApiCoachLoginVerifyRoute
+  '/api/public/program/$id': typeof ApiPublicProgramIdRouteWithChildren
+  '/api/coach/exercise/$id/verify': typeof ApiCoachExerciseIdVerifyRoute
+  '/api/public/library/$id/chunks': typeof ApiPublicLibraryIdChunksRoute
+  '/api/public/program/$id/complete': typeof ApiPublicProgramIdCompleteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,14 +257,29 @@ export interface FileRoutesById {
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/coaches': typeof AuthenticatedCoachesRoute
+  '/_authenticated/creations': typeof AuthenticatedCreationsRoute
   '/_authenticated/curriculum': typeof AuthenticatedCurriculumRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/hybrid': typeof AuthenticatedHybridRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/strength': typeof AuthenticatedStrengthRoute
   '/_authenticated/tryouts': typeof AuthenticatedTryoutsRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/api/coach/programs': typeof ApiCoachProgramsRoute
+  '/api/internal/programs': typeof ApiInternalProgramsRoute
+  '/api/internal/telegram': typeof ApiInternalTelegramRoute
+  '/api/internal/youtube-fetch': typeof ApiInternalYoutubeFetchRoute
   '/api/public/coach-of-the-month': typeof ApiPublicCoachOfTheMonthRoute
+  '/api/public/library': typeof ApiPublicLibraryRouteWithChildren
+  '/api/telegram/webhook': typeof ApiTelegramWebhookRoute
   '/_authenticated/students/': typeof AuthenticatedStudentsIndexRoute
+  '/api/coach/login/request': typeof ApiCoachLoginRequestRoute
+  '/api/coach/login/verify': typeof ApiCoachLoginVerifyRoute
+  '/api/public/program/$id': typeof ApiPublicProgramIdRouteWithChildren
+  '/api/coach/exercise/$id/verify': typeof ApiCoachExerciseIdVerifyRoute
+  '/api/public/library/$id/chunks': typeof ApiPublicLibraryIdChunksRoute
+  '/api/public/program/$id/complete': typeof ApiPublicProgramIdCompleteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,14 +289,29 @@ export interface FileRouteTypes {
     | '/coach-of-the-month'
     | '/sitemap.xml'
     | '/coaches'
+    | '/creations'
     | '/curriculum'
     | '/dashboard'
+    | '/hybrid'
     | '/library'
     | '/settings'
+    | '/strength'
     | '/tryouts'
     | '/students/$id'
+    | '/api/coach/programs'
+    | '/api/internal/programs'
+    | '/api/internal/telegram'
+    | '/api/internal/youtube-fetch'
     | '/api/public/coach-of-the-month'
+    | '/api/public/library'
+    | '/api/telegram/webhook'
     | '/students/'
+    | '/api/coach/login/request'
+    | '/api/coach/login/verify'
+    | '/api/public/program/$id'
+    | '/api/coach/exercise/$id/verify'
+    | '/api/public/library/$id/chunks'
+    | '/api/public/program/$id/complete'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,14 +319,29 @@ export interface FileRouteTypes {
     | '/coach-of-the-month'
     | '/sitemap.xml'
     | '/coaches'
+    | '/creations'
     | '/curriculum'
     | '/dashboard'
+    | '/hybrid'
     | '/library'
     | '/settings'
+    | '/strength'
     | '/tryouts'
     | '/students/$id'
+    | '/api/coach/programs'
+    | '/api/internal/programs'
+    | '/api/internal/telegram'
+    | '/api/internal/youtube-fetch'
     | '/api/public/coach-of-the-month'
+    | '/api/public/library'
+    | '/api/telegram/webhook'
     | '/students'
+    | '/api/coach/login/request'
+    | '/api/coach/login/verify'
+    | '/api/public/program/$id'
+    | '/api/coach/exercise/$id/verify'
+    | '/api/public/library/$id/chunks'
+    | '/api/public/program/$id/complete'
   id:
     | '__root__'
     | '/'
@@ -182,14 +350,29 @@ export interface FileRouteTypes {
     | '/coach-of-the-month'
     | '/sitemap.xml'
     | '/_authenticated/coaches'
+    | '/_authenticated/creations'
     | '/_authenticated/curriculum'
     | '/_authenticated/dashboard'
+    | '/_authenticated/hybrid'
     | '/_authenticated/library'
     | '/_authenticated/settings'
+    | '/_authenticated/strength'
     | '/_authenticated/tryouts'
     | '/_authenticated/students/$id'
+    | '/api/coach/programs'
+    | '/api/internal/programs'
+    | '/api/internal/telegram'
+    | '/api/internal/youtube-fetch'
     | '/api/public/coach-of-the-month'
+    | '/api/public/library'
+    | '/api/telegram/webhook'
     | '/_authenticated/students/'
+    | '/api/coach/login/request'
+    | '/api/coach/login/verify'
+    | '/api/public/program/$id'
+    | '/api/coach/exercise/$id/verify'
+    | '/api/public/library/$id/chunks'
+    | '/api/public/program/$id/complete'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,7 +381,17 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CoachOfTheMonthRoute: typeof CoachOfTheMonthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiCoachProgramsRoute: typeof ApiCoachProgramsRoute
+  ApiInternalProgramsRoute: typeof ApiInternalProgramsRoute
+  ApiInternalTelegramRoute: typeof ApiInternalTelegramRoute
+  ApiInternalYoutubeFetchRoute: typeof ApiInternalYoutubeFetchRoute
   ApiPublicCoachOfTheMonthRoute: typeof ApiPublicCoachOfTheMonthRoute
+  ApiPublicLibraryRoute: typeof ApiPublicLibraryRouteWithChildren
+  ApiTelegramWebhookRoute: typeof ApiTelegramWebhookRoute
+  ApiCoachLoginRequestRoute: typeof ApiCoachLoginRequestRoute
+  ApiCoachLoginVerifyRoute: typeof ApiCoachLoginVerifyRoute
+  ApiPublicProgramIdRoute: typeof ApiPublicProgramIdRouteWithChildren
+  ApiCoachExerciseIdVerifyRoute: typeof ApiCoachExerciseIdVerifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,6 +438,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTryoutsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/strength': {
+      id: '/_authenticated/strength'
+      path: '/strength'
+      fullPath: '/strength'
+      preLoaderRoute: typeof AuthenticatedStrengthRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -257,6 +457,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hybrid': {
+      id: '/_authenticated/hybrid'
+      path: '/hybrid'
+      fullPath: '/hybrid'
+      preLoaderRoute: typeof AuthenticatedHybridRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -273,6 +480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCurriculumRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/creations': {
+      id: '/_authenticated/creations'
+      path: '/creations'
+      fullPath: '/creations'
+      preLoaderRoute: typeof AuthenticatedCreationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/coaches': {
       id: '/_authenticated/coaches'
       path: '/coaches'
@@ -287,11 +501,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/telegram/webhook': {
+      id: '/api/telegram/webhook'
+      path: '/api/telegram/webhook'
+      fullPath: '/api/telegram/webhook'
+      preLoaderRoute: typeof ApiTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/library': {
+      id: '/api/public/library'
+      path: '/api/public/library'
+      fullPath: '/api/public/library'
+      preLoaderRoute: typeof ApiPublicLibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/coach-of-the-month': {
       id: '/api/public/coach-of-the-month'
       path: '/api/public/coach-of-the-month'
       fullPath: '/api/public/coach-of-the-month'
       preLoaderRoute: typeof ApiPublicCoachOfTheMonthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/youtube-fetch': {
+      id: '/api/internal/youtube-fetch'
+      path: '/api/internal/youtube-fetch'
+      fullPath: '/api/internal/youtube-fetch'
+      preLoaderRoute: typeof ApiInternalYoutubeFetchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/telegram': {
+      id: '/api/internal/telegram'
+      path: '/api/internal/telegram'
+      fullPath: '/api/internal/telegram'
+      preLoaderRoute: typeof ApiInternalTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/programs': {
+      id: '/api/internal/programs'
+      path: '/api/internal/programs'
+      fullPath: '/api/internal/programs'
+      preLoaderRoute: typeof ApiInternalProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/coach/programs': {
+      id: '/api/coach/programs'
+      path: '/api/coach/programs'
+      fullPath: '/api/coach/programs'
+      preLoaderRoute: typeof ApiCoachProgramsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/students/$id': {
@@ -301,15 +557,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/program/$id': {
+      id: '/api/public/program/$id'
+      path: '/api/public/program/$id'
+      fullPath: '/api/public/program/$id'
+      preLoaderRoute: typeof ApiPublicProgramIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/coach/login/verify': {
+      id: '/api/coach/login/verify'
+      path: '/api/coach/login/verify'
+      fullPath: '/api/coach/login/verify'
+      preLoaderRoute: typeof ApiCoachLoginVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/coach/login/request': {
+      id: '/api/coach/login/request'
+      path: '/api/coach/login/request'
+      fullPath: '/api/coach/login/request'
+      preLoaderRoute: typeof ApiCoachLoginRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/program/$id/complete': {
+      id: '/api/public/program/$id/complete'
+      path: '/complete'
+      fullPath: '/api/public/program/$id/complete'
+      preLoaderRoute: typeof ApiPublicProgramIdCompleteRouteImport
+      parentRoute: typeof ApiPublicProgramIdRoute
+    }
+    '/api/public/library/$id/chunks': {
+      id: '/api/public/library/$id/chunks'
+      path: '/$id/chunks'
+      fullPath: '/api/public/library/$id/chunks'
+      preLoaderRoute: typeof ApiPublicLibraryIdChunksRouteImport
+      parentRoute: typeof ApiPublicLibraryRoute
+    }
+    '/api/coach/exercise/$id/verify': {
+      id: '/api/coach/exercise/$id/verify'
+      path: '/api/coach/exercise/$id/verify'
+      fullPath: '/api/coach/exercise/$id/verify'
+      preLoaderRoute: typeof ApiCoachExerciseIdVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCoachesRoute: typeof AuthenticatedCoachesRoute
+  AuthenticatedCreationsRoute: typeof AuthenticatedCreationsRoute
   AuthenticatedCurriculumRoute: typeof AuthenticatedCurriculumRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedHybridRoute: typeof AuthenticatedHybridRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStrengthRoute: typeof AuthenticatedStrengthRoute
   AuthenticatedTryoutsRoute: typeof AuthenticatedTryoutsRoute
   AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
   AuthenticatedStudentsIndexRoute: typeof AuthenticatedStudentsIndexRoute
@@ -317,10 +618,13 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCoachesRoute: AuthenticatedCoachesRoute,
+  AuthenticatedCreationsRoute: AuthenticatedCreationsRoute,
   AuthenticatedCurriculumRoute: AuthenticatedCurriculumRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedHybridRoute: AuthenticatedHybridRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStrengthRoute: AuthenticatedStrengthRoute,
   AuthenticatedTryoutsRoute: AuthenticatedTryoutsRoute,
   AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
   AuthenticatedStudentsIndexRoute: AuthenticatedStudentsIndexRoute,
@@ -329,14 +633,56 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiPublicLibraryRouteChildren {
+  ApiPublicLibraryIdChunksRoute: typeof ApiPublicLibraryIdChunksRoute
+}
+
+const ApiPublicLibraryRouteChildren: ApiPublicLibraryRouteChildren = {
+  ApiPublicLibraryIdChunksRoute: ApiPublicLibraryIdChunksRoute,
+}
+
+const ApiPublicLibraryRouteWithChildren =
+  ApiPublicLibraryRoute._addFileChildren(ApiPublicLibraryRouteChildren)
+
+interface ApiPublicProgramIdRouteChildren {
+  ApiPublicProgramIdCompleteRoute: typeof ApiPublicProgramIdCompleteRoute
+}
+
+const ApiPublicProgramIdRouteChildren: ApiPublicProgramIdRouteChildren = {
+  ApiPublicProgramIdCompleteRoute: ApiPublicProgramIdCompleteRoute,
+}
+
+const ApiPublicProgramIdRouteWithChildren =
+  ApiPublicProgramIdRoute._addFileChildren(ApiPublicProgramIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   CoachOfTheMonthRoute: CoachOfTheMonthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiCoachProgramsRoute: ApiCoachProgramsRoute,
+  ApiInternalProgramsRoute: ApiInternalProgramsRoute,
+  ApiInternalTelegramRoute: ApiInternalTelegramRoute,
+  ApiInternalYoutubeFetchRoute: ApiInternalYoutubeFetchRoute,
   ApiPublicCoachOfTheMonthRoute: ApiPublicCoachOfTheMonthRoute,
+  ApiPublicLibraryRoute: ApiPublicLibraryRouteWithChildren,
+  ApiTelegramWebhookRoute: ApiTelegramWebhookRoute,
+  ApiCoachLoginRequestRoute: ApiCoachLoginRequestRoute,
+  ApiCoachLoginVerifyRoute: ApiCoachLoginVerifyRoute,
+  ApiPublicProgramIdRoute: ApiPublicProgramIdRouteWithChildren,
+  ApiCoachExerciseIdVerifyRoute: ApiCoachExerciseIdVerifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
