@@ -454,6 +454,7 @@ export type Database = {
       training_programs: {
         Row: {
           athlete_name: string
+          coach_telegram_id: string | null
           created_at: string | null
           id: string
           program_json: Json
@@ -463,6 +464,7 @@ export type Database = {
         }
         Insert: {
           athlete_name: string
+          coach_telegram_id?: string | null
           created_at?: string | null
           id?: string
           program_json: Json
@@ -472,6 +474,7 @@ export type Database = {
         }
         Update: {
           athlete_name?: string
+          coach_telegram_id?: string | null
           created_at?: string | null
           id?: string
           program_json?: Json
