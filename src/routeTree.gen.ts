@@ -23,6 +23,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCurriculumRouteImport } from './routes/_authenticated/curriculum'
 import { Route as AuthenticatedCreationsRouteImport } from './routes/_authenticated/creations'
 import { Route as AuthenticatedCoachesRouteImport } from './routes/_authenticated/coaches'
+import { Route as AuthenticatedAiResearchRouteImport } from './routes/_authenticated/ai-research'
 import { Route as AuthenticatedStudentsIndexRouteImport } from './routes/_authenticated/students.index'
 import { Route as ApiTelegramWebhookRouteImport } from './routes/api/telegram/webhook'
 import { Route as ApiPublicLibraryRouteImport } from './routes/api/public/library'
@@ -106,6 +107,11 @@ const AuthenticatedCreationsRoute = AuthenticatedCreationsRouteImport.update({
 const AuthenticatedCoachesRoute = AuthenticatedCoachesRouteImport.update({
   id: '/coaches',
   path: '/coaches',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiResearchRoute = AuthenticatedAiResearchRouteImport.update({
+  id: '/ai-research',
+  path: '/ai-research',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStudentsIndexRoute =
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ai-research': typeof AuthenticatedAiResearchRoute
   '/coaches': typeof AuthenticatedCoachesRoute
   '/creations': typeof AuthenticatedCreationsRoute
   '/curriculum': typeof AuthenticatedCurriculumRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/ai-research': typeof AuthenticatedAiResearchRoute
   '/coaches': typeof AuthenticatedCoachesRoute
   '/creations': typeof AuthenticatedCreationsRoute
   '/curriculum': typeof AuthenticatedCurriculumRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/coach-of-the-month': typeof CoachOfTheMonthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/ai-research': typeof AuthenticatedAiResearchRoute
   '/_authenticated/coaches': typeof AuthenticatedCoachesRoute
   '/_authenticated/creations': typeof AuthenticatedCreationsRoute
   '/_authenticated/curriculum': typeof AuthenticatedCurriculumRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach-of-the-month'
     | '/sitemap.xml'
+    | '/ai-research'
     | '/coaches'
     | '/creations'
     | '/curriculum'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach-of-the-month'
     | '/sitemap.xml'
+    | '/ai-research'
     | '/coaches'
     | '/creations'
     | '/curriculum'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach-of-the-month'
     | '/sitemap.xml'
+    | '/_authenticated/ai-research'
     | '/_authenticated/coaches'
     | '/_authenticated/creations'
     | '/_authenticated/curriculum'
@@ -494,6 +506,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoachesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ai-research': {
+      id: '/_authenticated/ai-research'
+      path: '/ai-research'
+      fullPath: '/ai-research'
+      preLoaderRoute: typeof AuthenticatedAiResearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/students/': {
       id: '/_authenticated/students/'
       path: '/students'
@@ -603,6 +622,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAiResearchRoute: typeof AuthenticatedAiResearchRoute
   AuthenticatedCoachesRoute: typeof AuthenticatedCoachesRoute
   AuthenticatedCreationsRoute: typeof AuthenticatedCreationsRoute
   AuthenticatedCurriculumRoute: typeof AuthenticatedCurriculumRoute
@@ -617,6 +637,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAiResearchRoute: AuthenticatedAiResearchRoute,
   AuthenticatedCoachesRoute: AuthenticatedCoachesRoute,
   AuthenticatedCreationsRoute: AuthenticatedCreationsRoute,
   AuthenticatedCurriculumRoute: AuthenticatedCurriculumRoute,

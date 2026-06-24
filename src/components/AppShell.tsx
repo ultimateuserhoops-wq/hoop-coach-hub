@@ -3,7 +3,7 @@ import { useRoles, useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Users, BookOpen, ClipboardList, Trophy, Library, Settings, LogOut, Dumbbell, Blend, FolderOpen, Menu } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, ClipboardList, Trophy, Library, Settings, LogOut, Dumbbell, Blend, FolderOpen, Menu, Sparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,7 @@ const nav: NavItem[] = [
   { to: "/tryouts", label: "Try-out Elite", icon: ClipboardList },
   { to: "/creations", label: "My Creations", icon: FolderOpen },
   { to: "/library", label: "Thư viện", icon: Library },
+  { to: "/ai-research", label: "AI Research", icon: Sparkles },
   { to: "/coaches", label: "HLV", icon: Trophy, adminOnly: true },
   { to: "/settings", label: "Cài đặt", icon: Settings, adminOnly: true },
 ];

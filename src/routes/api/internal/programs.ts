@@ -27,6 +27,80 @@ interface ParsedExercise {
   sort_order: number;
 }
 
+const DAY_NAMES_VI = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+function buildDayLabels(weeksCount: number, daysPerWeek: number): string[] {
+  // Choose which weekdays to use based on daysPerWeek
+  const daySlots: string[] = {
+    2: ['T2', 'T5'],
+    3: ['T2', 'T4', 'T6'],
+    4: ['T2', 'T4', 'T5', 'T7'],
+    5: ['T2', 'T3', 'T5', 'T6', 'T7'],
+  }[daysPerWeek] ?? ['T2', 'T4', 'T6'];
+
+  const labels: string[] = [];
+  for (let w = 1; w <= weeksCount; w++) {
+    for (let d = 0; d < daysPerWeek; d++) {
+      labels.push(`Tuần ${w} - ${daySlots[d]}`);
+    }
+  }
+  return labels;
+}
+
+async function generateMultiWeekProgram(
+  reportText: string,
+  weeksCount: number,
+  daysPerWeek: number,
+  anthropicKey: string,
+): Promise<ParsedExercise[]> {
+  const anthropic = new Anthropic({ apiKey: anthropicKey });
+
+  const dayLabels = buildDayLabels(weeksCount, daysPerWeek);
+  const dayLabelsStr = dayLabels.map((l, i) => `${i + 1}. "${l}"`).join(', ');
+
+  const systemPrompt = `Bạn là BDC Training Engine — chuyên gia lập kế hoạch tập luyện bóng rổ trẻ theo mô hình NASM OPT.
+Nhiệm vụ: Tạo chương trình ${weeksCount} tuần với ${daysPerWeek} buổi/tuần dựa trên kết quả đánh giá của vận động viên.
+
+QUY TẮC:
+- Trả về ĐÚNG một JSON array. KHÔNG có text ngoài JSON. KHÔNG có markdown backticks.
+- Mỗi object trong array có các trường: exercise_name, category, day_label, sets_reps, notes, sort_order
+- day_label PHẢI là một trong: ${dayLabelsStr}
+- Mỗi day_label phải có ít nhất 3–6 bài tập
+- Tăng dần cường độ mỗi tuần: Tuần 1 nhẹ hơn Tuần 2, Tuần 2 nhẹ hơn Tuần 3, v.v.
+- category: chọn từ "plyometric", "strength", "agility", "power", "conditioning", "mobility", "shooting", "skills"
+- sets_reps: bao gồm đủ: số set × số rep/thời gian + thông số quan trọng (vd: "3×10, nghỉ 60s", "4×5, 75-80% 1RM")
+- notes: cue kỹ thuật ngắn gọn (1–2 câu tiếng Việt)
+- sort_order: số nguyên bắt đầu từ 0 cho mỗi ngày (reset về 0 mỗi day_label mới)
+
+NASM OPT PROGRESSION (áp dụng qua ${weeksCount} tuần):
+- Tuần đầu (${weeksCount > 4 ? Math.ceil(weeksCount/3) : 1}–${weeksCount > 4 ? Math.ceil(weeksCount/3) : 2} tuần): Phase 1 Stabilization — 2–3 set, 12–20 rep, tempo chậm, trọng lượng nhẹ
+- Tuần giữa: Phase 2 Strength Endurance — 3–4 set, 8–12 rep, cường độ trung bình
+- Tuần cuối: Phase 4–5 Power — 4–5 set, 3–8 rep, cường độ cao hoặc plyometric`;
+
+  const userPrompt = `Dựa vào kết quả đánh giá dưới đây, tạo chương trình ${weeksCount} tuần với ${daysPerWeek} buổi/tuần.
+Tập trung vào các điểm yếu được xác định trong báo cáo.
+
+BÁO CÁO ĐÁNH GIÁ:
+${reportText.slice(0, 6000)}
+
+Tạo lịch tập cho TẤT CẢ ${dayLabels.length} buổi. Đảm bảo mỗi buổi có 4–6 bài tập phù hợp.`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8000,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "[]";
+  try {
+    const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    return JSON.parse(cleaned) as ParsedExercise[];
+  } catch {
+    return [];
+  }
+}
+
 async function parseExercisesWithClaude(reportHtml: string, anthropicKey: string): Promise<ParsedExercise[]> {
   const anthropic = new Anthropic({ apiKey: anthropicKey });
 
@@ -120,9 +194,10 @@ export const Route = createFileRoute("/api/internal/programs")({
             test_title: string;
             program_json: unknown;
             coach_telegram_id?: string;
-            // New: raw HTML for Claude parsing
             report_html?: string;
-            // Legacy: pre-parsed exercises (fallback)
+            weeks?: number;
+            days_per_week?: number;
+            focus_areas?: string[];
             exercises?: Array<{
               category: string;
               day_label: string;
@@ -137,11 +212,30 @@ export const Route = createFileRoute("/api/internal/programs")({
           const anthropicKey = process.env.ANTHROPIC_API_KEY;
           const youtubeKey = process.env.YOUTUBE_API_KEY;
 
-          // Parse exercises: prefer Claude on server, fall back to client-sent list
+          const weeksCount = Math.min(Math.max(body.weeks ?? 1, 1), 12);
+          const daysPerWeek = Math.min(Math.max(body.days_per_week ?? 3, 2), 5);
+          const isMultiWeek = weeksCount > 1;
+
+          // Strip HTML for plain text
+          const plainText = (body.report_html ?? '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+
           let exercises: ParsedExercise[] = [];
-          if (body.report_html && anthropicKey) {
-            exercises = await parseExercisesWithClaude(body.report_html, anthropicKey);
-          } else if (body.exercises?.length) {
+
+          if (anthropicKey) {
+            if (isMultiWeek) {
+              exercises = await generateMultiWeekProgram(plainText, weeksCount, daysPerWeek, anthropicKey);
+            } else if (body.report_html) {
+              exercises = await parseExercisesWithClaude(body.report_html, anthropicKey);
+            }
+          }
+
+          // Fallback: use pre-sent exercises
+          if (!exercises.length && body.exercises?.length) {
             exercises = body.exercises.map((e, i) => ({
               exercise_name: e.exercise_name,
               category: e.category,
@@ -158,7 +252,11 @@ export const Route = createFileRoute("/api/internal/programs")({
             .insert({
               athlete_name: body.athlete_name,
               test_title: body.test_title,
-              program_json: body.program_json,
+              program_json: {
+                ...(body.program_json as object),
+                weeks: weeksCount,
+                days_per_week: daysPerWeek,
+              },
               ...(body.coach_telegram_id ? { coach_telegram_id: body.coach_telegram_id } : {}),
             })
             .select("id")

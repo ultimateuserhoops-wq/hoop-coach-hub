@@ -3,10 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GenSchema = z.object({
-  type: z.enum(["curriculum", "tryout", "recommendation", "strength", "hybrid"]),
+  type: z.enum(["curriculum", "tryout", "recommendation", "strength", "hybrid", "research"]),
   target: z.string().min(1).max(120),
   extraContext: z.string().max(4000).optional(),
   studentId: z.string().uuid().optional(),
+  // AI Research (test designer) extras
+  selectedSourceTitles: z.array(z.string().max(300)).max(200).optional(),
+  useWebResearch: z.boolean().optional(),
+  testName: z.string().max(200).optional(),
   weeks: z.number().int().min(1).max(24).optional(),
   sessionsPerWeek: z.number().int().min(1).max(7).optional(),
   // How many AI calls to split the per-session plans into (to reduce load on
@@ -116,7 +120,10 @@ async function retrieveContext(supabase: any, query: string, _s: Settings): Prom
   return `\n--- Trích đoạn tài liệu BDC (tìm theo ngữ nghĩa) ---\n${parts.join("\n\n")}\n---`;
 }
 
-function buildRetrievalQuery(type: string, target: string, extra?: string) {
+function buildRetrievalQuery(type: string, target: string, extra?: string, level?: string) {
+  if (type === "research") {
+    return `Bài kiểm tra đánh giá bóng rổ cho nhóm tuổi ${target}${level ? `, trình độ ${level}` : ""}. Bài test kỹ thuật, thể lực, chiến thuật, IQ bóng rổ. ${extra ?? ""}`;
+  }
   if (type === "curriculum") {
     return `Giáo án và kế hoạch tập luyện bóng rổ cho học viên trình độ ${target}. ${extra ?? ""}`;
   }
@@ -141,6 +148,26 @@ function buildPrompt(data: any, libRefs: string) {
   const target = data.target;
   const extra = data.extraContext;
   const note = extra ? `\nGHI CHÚ / YÊU CẦU RIÊNG TỪ HLV (ưu tiên tuân theo): ${extra}` : "";
+
+  // AI Research extras: coach-picked source titles + optional web/knowledge augmentation.
+  const sourcesBlock =
+    data.selectedSourceTitles && data.selectedSourceTitles.length > 0
+      ? `\n--- Nguồn tài liệu HLV đã chọn để tham khảo ---\n${data.selectedSourceTitles.map((t: string) => `• ${t}`).join("\n")}\n---`
+      : "";
+  const webBlock = data.useWebResearch
+    ? "\n\nNGOÀI tài liệu trên, hãy kết hợp kiến thức cập nhật nhất về khoa học thể thao và phương pháp huấn luyện bóng rổ hiện đại để bổ sung. Ghi rõ phần nào lấy từ tài liệu, phần nào từ kiến thức bổ sung."
+    : "";
+
+  if (data.type === "research") {
+    const nameLine = data.testName
+      ? `Tên bài kiểm tra do HLV đặt: "${data.testName}".`
+      : "Hãy tự đặt một cái tên gọn cho bài kiểm tra.";
+    return `Bạn là chuyên gia khoa học thể thao tại BDC Basketball Centre. Hãy thiết kế MỘT BÀI KIỂM TRA (TEST) đánh giá năng lực bóng rổ cho nhóm tuổi ${target}, trình độ ${data.level ?? "không xác định"}.
+${nameLine}
+Bài làm BẮT BUỘC: mục tiêu bài test; 6–10 bài đo cụ thể (kỹ thuật, thể lực, chiến thuật, IQ) với cách thực hiện; thang điểm/cách chấm rõ ràng; dụng cụ cần chuẩn bị; timeline buổi test; cách giải thích kết quả cho phụ huynh.
+${STYLE_RULES}
+${libRefs}${sourcesBlock}${webBlock}${note}`;
+  }
 
   if (data.type === "tryout") {
     const lvl = data.level ? `, trình độ ${data.level}` : "";
@@ -525,7 +552,7 @@ export const generateWithKieAi = createServerFn({ method: "POST" })
     const callMax = isAnthropic ? 16000 : 8192;
     const autoBatch = isAnthropic ? 10 : 6;
 
-    const retrievalQuery = buildRetrievalQuery(data.type, data.target, data.extraContext);
+    const retrievalQuery = buildRetrievalQuery(data.type, data.target, data.extraContext, data.level);
     const libRefs = await retrieveContext(supabase, retrievalQuery, settings);
 
     const systemPrompt =
@@ -570,7 +597,8 @@ export const generateWithKieAi = createServerFn({ method: "POST" })
 
     await supabase.from("ai_generations").insert({
       coach_id: userId,
-      generation_type: data.type,
+      // 'research' isn't a generation_type enum value — log it as 'tryout'.
+      generation_type: (data.type === "research" ? "tryout" : data.type) as any,
       target_label: data.target,
       prompt: `${data.type} · ${data.target}`,
       response: aiText,
